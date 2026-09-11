@@ -1,0 +1,36 @@
+name: Daily Remote Job Scan
+
+on:
+  schedule:
+    # Runs at 03:00 UTC daily = 8:30 AM IST. Edit the cron below to change the time.
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab too
+
+permissions:
+  contents: write   # needed so the workflow can commit the CSV back to the repo
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run job finder
+        run: python remote_job_finder.py
+
+      - name: Commit results
+        run: |
+          git config user.name "job-scan-bot"
+          git config user.email "job-scan-bot@users.noreply.github.com"
+          git add results/ seen_jobs.json
+          git commit -m "Daily job scan $(date +'%Y-%m-%d')" || echo "No new results to commit"
+          git push
